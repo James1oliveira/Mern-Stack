@@ -1,42 +1,53 @@
+// Import Express app instance
 import app from './server.js'
+
+// Import MongoDB client
 import mongodb from "mongodb"
+
+// Load environment variables from .env file
 import dotenv from "dotenv"
+
+// Import DAOs to inject database connection
 import MoviesDAO from './dao/moviesDAO.js'
 import ReviewsDAO from './dao/reviewsDAO.js'
 
-// Main application startup function
+// Main async function to start the server
 async function main() {
 
-  // Load environment variables from .env file
+  // Load environment variables into process.env
   dotenv.config()
 
-  // Create a new MongoDB client using the connection URI
+  // Create MongoDB client using connection URI
   const client = new mongodb.MongoClient(
     process.env.MOVIEREVIEWS_DB_URI
   )
 
-  // Define the server port (default: 8000)
+  // Set server port (fallback to 8000)
   const port = process.env.PORT || 8000
 
   try {
-    // Connect to the MongoDB cluster
+    // ===================== DATABASE CONNECTION =====================
+
+    // Connect to MongoDB cluster
     await client.connect()
 
-    // Inject the database connection into DAOs
-    // This allows DAOs to access the database collections
+    // Inject database connection into DAOs
     await MoviesDAO.injectDB(client)
     await ReviewsDAO.injectDB(client)
 
-    // Start the Express server
+    // ===================== START SERVER =====================
+
+    // Start Express server
     app.listen(port, () => {
-      console.log('server is running on port: ' + port)
+      console.log('Server is running on port: ' + port)
     })
+
   } catch (e) {
-    // Log startup errors and exit the process
+    // Log startup errors and exit process
     console.error(e)
     process.exit(1)
   }
 }
 
-// Execute the main function and catch any unhandled errors
+// Run the main function and catch unhandled promise rejections
 main().catch(console.error)

@@ -1,27 +1,29 @@
+// Import MongoDB driver
 import mongodb from "mongodb"
 
-// Extract ObjectId helper from MongoDB package
+// Extract ObjectId helper for MongoDB document IDs
 const ObjectId = mongodb.ObjectId
 
-// Will hold the MongoDB reviews collection once connected
+// This will store the reviews collection reference
 let reviews
 
-// Data Access Object (DAO) for the reviews collection
+// Data Access Object (DAO) for reviews collection
 export default class ReviewsDAO {
 
-  // Injects the database connection into this DAO
-  // Called once when the server starts
+  // Inject database connection (called once at server startup)
   static async injectDB(conn) {
-    // If the collection is already initialized, do nothing
+    // Prevent re-creating the collection reference
     if (reviews) {
       return
     }
+
     try {
-      // Connect to the reviews collection in the specified namespace
+      // Connect to the reviews collection
       reviews = await conn
         .db(process.env.MOVIEREVIEWS_NS)
         .collection('reviews')
-    } catch (e) {
+    }
+    catch (e) {
       // Log connection errors
       console.error(
         `unable to establish connection handle in reviewDAO: ${e}`
@@ -29,58 +31,67 @@ export default class ReviewsDAO {
     }
   }
 
-  // Inserts a new review document into the database
+  // ===================== ADD A REVIEW =====================
   static async addReview(movieId, user, review, date) {
     try {
-      // Construct the review document
+      // Create a review document
       const reviewDoc = {
-        name: user.name,           // Reviewer's name
-        user_id: user._id,         // Reviewer's user ID
-        date: date,                // Date the review was posted
-        review: review,            // Review text
-        movie_id: ObjectId(movieId) // Associated movie ID
+        name: user.name,               // Reviewer's name
+        user_id: user._id,             // Reviewer's user ID
+        date: date,                    // Review date
+        review: review,                // Review content
+        movie_id: new ObjectId(movieId)    // Associated movie ID
       }
 
-      // Insert the review into the collection
+      // Insert review into the database
       return await reviews.insertOne(reviewDoc)
-    } catch (e) {
-      // Handle insert errors
+    }
+    catch (e) {
+      // Handle insertion errors
       console.error(`unable to post review: ${e}`)
       return { error: e }
     }
   }
 
-  // Updates an existing review
-  // Only allows updates by the original author
+  // ===================== UPDATE A REVIEW =====================
   static async updateReview(reviewId, userId, review, date) {
     try {
-      // Update review text and date if user ID and review ID match
+      // Update review only if the user is the original author
       const updateResponse = await reviews.updateOne(
-        { user_id: userId, _id: ObjectId(reviewId) },
-        { $set: { review: review, date: date } }
+        {
+          _id: ObjectId(reviewId), // Review ID
+          user_id: userId          // User ID (authorization check)
+        },
+        {
+          $set: {
+            review: review,        // Updated review text
+            date: date             // Updated timestamp
+          }
+        }
       )
 
       return updateResponse
-    } catch (e) {
+    }
+    catch (e) {
       // Handle update errors
       console.error(`unable to update review: ${e}`)
       return { error: e }
     }
   }
 
-  // Deletes a review
-  // Only allows deletion by the original author
+  // ===================== DELETE A REVIEW =====================
   static async deleteReview(reviewId, userId) {
     try {
-      // Delete the review if user ID and review ID match
+      // Delete review only if the user is the original author
       const deleteResponse = await reviews.deleteOne({
-        _id: ObjectId(reviewId),
-        user_id: userId
+        _id: ObjectId(reviewId), // Review ID
+        user_id: userId          // User ID (authorization check)
       })
 
       return deleteResponse
-    } catch (e) {
-      // Handle delete errors
+    }
+    catch (e) {
+      // Handle deletion errors
       console.error(`unable to delete review: ${e}`)
       return { error: e }
     }

@@ -1,26 +1,29 @@
+// Import the Reviews Data Access Object (DAO)
+// This handles all database operations related to reviews
 import ReviewsDAO from '../dao/reviewsDAO.js'
 
 // Controller class for handling review-related API requests
 export default class ReviewsController {
 
-  // POST /api/reviews
-  // Creates a new review for a movie
+  // ===================== ADD A REVIEW =====================
   static async apiPostReview(req, res, next) {
     try {
-      // Extract movie ID and review text from the request body
+      // Extract movie ID from request body
       const movieId = req.body.movie_id
+
+      // Extract review text from request body
       const review = req.body.review
 
-      // Build user information object
+      // Create user information object
       const userInfo = {
-        name: req.body.name,
-        _id: req.body.user_id
+        name: req.body.name,     // Reviewer's name
+        _id: req.body.user_id    // Reviewer's user ID
       }
 
-      // Get the current date/time for the review
+      // Create a timestamp for the review
       const date = new Date()
 
-      // Insert the review into the database via the DAO
+      // Save the review to the database
       const ReviewResponse = await ReviewsDAO.addReview(
         movieId,
         userInfo,
@@ -28,72 +31,73 @@ export default class ReviewsController {
         date
       )
 
-      // Return success response
+      // Send success response
       res.json({ status: "success" })
     } catch (e) {
-      // Handle server/database errors
+      // Handle server errors
       res.status(500).json({ error: e.message })
     }
   }
 
-  // PUT /api/reviews
-  // Updates an existing review
+  // ===================== UPDATE A REVIEW =====================
   static async apiUpdateReview(req, res, next) {
     try {
-      // Extract review ID and updated review text
+      // Extract review ID from request body
       const reviewId = req.body.review_id
+
+      // Extract updated review text
       const review = req.body.review
 
-      // Get the current date/time for the update
+      // Update timestamp
       const date = new Date()
 
-      // Update the review via the DAO
+      // Attempt to update the review in the database
       const ReviewResponse = await ReviewsDAO.updateReview(
         reviewId,
-        req.body.user_id, // Used to verify review ownership
+        req.body.user_id, // Ensure only the original user can update
         review,
         date
       )
 
-      // Check for errors returned from the DAO
+      // Check for database-level errors
       var { error } = ReviewResponse
       if (error) {
         res.status(400).json({ error })
+        return
       }
 
-      // If no document was modified, user may not be the original author
+      // If no document was modified, the user may not be the original poster
       if (ReviewResponse.modifiedCount === 0) {
         throw new Error(
-          "unable to update review. User may not be original poster"
+          "Unable to update review. User may not be original poster"
         )
       }
 
-      // Return success response
+      // Send success response
       res.json({ status: "success" })
     } catch (e) {
-      // Handle server/database errors
+      // Handle server errors
       res.status(500).json({ error: e.message })
     }
   }
 
-  // DELETE /api/reviews
-  // Deletes an existing review
+  // ===================== DELETE A REVIEW =====================
   static async apiDeleteReview(req, res, next) {
     try {
-      // Extract review ID and user ID from the request body
+      // Extract review ID and user ID from request body
       const reviewId = req.body.review_id
       const userId = req.body.user_id
 
-      // Delete the review via the DAO (user ID verifies ownership)
+      // Attempt to delete the review from the database
       const ReviewResponse = await ReviewsDAO.deleteReview(
         reviewId,
         userId
       )
 
-      // Return success response
+      // Send success response
       res.json({ status: "success" })
     } catch (e) {
-      // Handle server/database errors
+      // Handle server errors
       res.status(500).json({ error: e.message })
     }
   }

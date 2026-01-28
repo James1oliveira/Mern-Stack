@@ -1,21 +1,54 @@
-// Import the React library
-// This is necessary to use JSX syntax and React features in this component
-import React from 'react';
+import React, {useState} from 'react'
+import Form from 'react-bootstrap/Form'
+import Button from 'react-bootstrap/Button'
 
-// Define a functional component named Login
-// Functional components are one of the ways to create components in React
-function Login() {
-  // The component returns JSX, which tells React what to render on the UI
-  return (
-    // A div with a className "App" is rendered
-    // In JSX, we use 'className' instead of 'class' to avoid conflicts with JavaScript keywords
-    <div className="App"> 
-      {/* This is the content inside the div. 
-          It will render the text "Login" on the page */}
-      Login
+const Login = props => {
+ 
+  const [name, setName] = useState("")
+  const [id, setId] = useState("") 
+
+  const onChangeName = e => {
+    const name = e.target.value
+    setName(name);
+  } 
+
+  const onChangeId = e => {
+    const id = e.target.value
+    setId(id);
+  } 
+
+  const login = () => {
+    props.login({name: name, id: id})
+    props.history.push('/')
+  } 
+
+  return(
+    <div>
+      <Form>
+        <Form.Group>
+          <Form.Label>Username</Form.Label>
+          <Form.Control
+            type="text"
+            placeholder="Enter username"
+            value={name}
+            onChange={onChangeName}
+          />
+        </Form.Group>
+        <Form.Group>
+          <Form.Label>ID</Form.Label>
+          <Form.Control
+            type="text"
+            placeholder="Enter id"
+            value={id}
+            onChange={onChangeId}
+          />
+        </Form.Group> 
+        <Button variant="primary" onClick={login}>
+          Submit
+        </Button>
+      </Form> 
     </div>
-  );
+  )
 }
 
-// Export the Login component so it can be imported and used in other parts of the application
 export default Login;

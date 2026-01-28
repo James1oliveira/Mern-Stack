@@ -1,116 +1,122 @@
+// Import MongoDB driver
 import mongodb from "mongodb"
 
-// Extract ObjectId helper from MongoDB package
+// Extract ObjectId helper for querying by MongoDB IDs
 const ObjectId = mongodb.ObjectId
 
-// Will hold the MongoDB movies collection once connected
+// This will hold the movies collection reference
 let movies
 
-// Data Access Object (DAO) for the movies collection
+// Data Access Object (DAO) for movies collection
 export default class MoviesDAO {
 
-  // Injects the database connection into this DAO
-  // Called once when the server starts
+  // Inject database connection (runs once when server starts)
   static async injectDB(conn) {
-    // If the collection is already set, do nothing
+    // Prevent re-initializing the collection
     if (movies) {
       return
     }
+
     try {
-      // Connect to the movies collection in the specified namespace
+      // Connect to the movies collection in the specified database
       movies = await conn
         .db(process.env.MOVIEREVIEWS_NS)
         .collection('movies')
-    } catch (e) {
+    }
+    catch (e) {
       // Log connection errors
       console.error(`unable to connect in MoviesDAO: ${e}`)
     }
   }
 
-  // Retrieves a list of movies with optional filters and pagination
+  // ===================== GET MOVIES (WITH FILTERS & PAGINATION) =====================
   static async getMovies({
     filters = null,
     page = 0,
     moviesPerPage = 20
   } = {}) {
 
-    // MongoDB query object
     let query
 
-    // Apply filters if provided
+    // Build MongoDB query based on filters
     if (filters) {
-      // Full-text search by title
+      // Search movies by title using MongoDB text index
       if ("title" in filters) {
         query = { $text: { $search: filters['title'] } }
       }
-      // Filter by movie rating
+      // Filter movies by rating (e.g. PG, R)
       else if ("rated" in filters) {
-        query = { "rated": { $eq: filters['rated'] } }
+        query = { rated: { $eq: filters['rated'] } }
       }
     }
 
     let cursor
+
     try {
-      // Find movies matching the query with pagination
+      // Execute query with pagination
       cursor = await movies
         .find(query)
-        .limit(moviesPerPage)
-        .skip(moviesPerPage * page)
+        .limit(moviesPerPage)              // Limit results per page
+        .skip(moviesPerPage * page)        // Skip previous pages
 
-      // Convert cursor results to an array
+      // Convert MongoDB cursor to array
       const moviesList = await cursor.toArray()
 
-      // Get total number of matching movies
+      // Count total number of matching documents
       const totalNumMovies = await movies.countDocuments(query)
 
-      // Return both the movie list and total count
+      // Return movie list and total count
       return { moviesList, totalNumMovies }
-    } catch (e) {
-      // Handle query errors
+    }
+    catch (e) {
+      // Handle database query errors
       console.error(`Unable to issue find command, ${e}`)
       return { moviesList: [], totalNumMovies: 0 }
     }
   }
 
-  // Retrieves a single movie by its ID
-  // Also joins related reviews using an aggregation pipeline
+  // ===================== GET MOVIE BY ID (WITH REVIEWS) =====================
   static async getMovieById(id) {
     try {
+      // Aggregate pipeline to:
+      // 1. Match movie by ID
+      // 2. Join related reviews from reviews collection
       return await movies
         .aggregate([
           {
-            // Match the movie by its ObjectId
             $match: {
               _id: new ObjectId(id)
             }
           },
           {
-            // Join reviews collection to include reviews for the movie
             $lookup: {
-              from: 'reviews',
-              localField: '_id',
-              foreignField: 'movie_id',
-              as: 'reviews'
+              from: 'reviews',        // Reviews collection
+              localField: '_id',      // Movie ID in movies collection
+              foreignField: 'movie_id', // Movie ID in reviews collection
+              as: 'reviews'           // Output array field
             }
           }
         ])
-        .next() // Return the first (and only) matching document
-    } catch (e) {
-      // Log and rethrow errors
+        .next() // Return a single document
+    }
+    catch (e) {
+      // Log and rethrow error
       console.error(`something went wrong in getMovieById: ${e}`)
       throw e
     }
   }
 
-  // Retrieves all distinct movie ratings (e.g., G, PG, PG-13)
+  // ===================== GET ALL RATINGS =====================
   static async getRatings() {
     let ratings = []
+
     try {
-      // Get unique values from the "rated" field
+      // Get unique values of the "rated" field
       ratings = await movies.distinct("rated")
       return ratings
-    } catch (e) {
-      // Handle errors and return empty list
+    }
+    catch (e) {
+      // Handle errors
       console.error(`unable to get ratings, ${e}`)
       return ratings
     }
