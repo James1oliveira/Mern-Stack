@@ -1,7 +1,10 @@
+// /app/githubusers/page.jsx
 import Link from "next/link";
 
 async function fetchGitHubUsers() {
-  const res = await fetch("https://api.github.com/search/users?q=greg");
+  const res = await fetch("https://api.github.com/search/users?q=greg", {
+    next: { revalidate: 60 },
+  });
   const json = await res.json();
   return json.items;
 }
@@ -17,7 +20,6 @@ const GitHubUsersPage = async () => {
             <th>Name</th>
             <th>URL</th>
             <th>Repos</th>
-            <th></th>
           </tr>
         </thead>
         <tbody>
@@ -27,7 +29,7 @@ const GitHubUsersPage = async () => {
                 <div className="flex items-center space-x-3">
                   <div className="avatar">
                     <div className="mask mask-squircle w-12 h-12">
-                      <img src={user.avatar_url} />
+                      <img src={user.avatar_url} alt={user.login} />
                     </div>
                   </div>
                   <div>
@@ -41,14 +43,11 @@ const GitHubUsersPage = async () => {
                   View on GitHub
                 </Link>
               </td>
-                <th>
-                <Link
-                  href={`/githubusers/${user.login}`}
-                  className="btn btn-link"
-                >
+              <td>
+                <Link href={`/githubusers/${user.login}`} className="btn btn-link">
                   Go to Repos
                 </Link>
-              </th>
+              </td>
             </tr>
           ))}
         </tbody>

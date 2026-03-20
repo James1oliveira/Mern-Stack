@@ -1,6 +1,7 @@
-
 "use client";
 import { useState } from "react";
+
+
 
 export const metadata = {
   title: "About Greg's Portfolio of Small Bets",
